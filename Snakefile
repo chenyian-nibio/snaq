@@ -800,6 +800,24 @@ rule summarize_all_for_manta:
     input:
         expand('results/{cohort}+manta.zip', cohort=get_finished_cohort())
 
+rule create_report:
+     """Create report for participantants"""
+     input:
+          manta="results/{cohort}/{id}+cls-{cls}+rrf-d{r}+manta.csv",
+          adiv="results/{cohort}/{id}+rrf-d{r}+alphadiversity.tsv",
+          taxonpath="db/taxonpath.json",
+          names="db/names.json"
+     output:
+          "results/{cohort}/report.{id}+cls-{cls}+rrf-d{r}.xlsx"
+     conda:
+          "envs/excel.yml"
+     shell:
+          "python scripts/create_report.py summarize "
+          "-i {input.manta} "
+          "-a {input.adiv} "
+          "-p {input.taxonpath} -n {input.names} "
+          "-o {output} "
+
 ruleorder: merge_taxonomy > taxonomy > manifest
 ruleorder: merge_dadatable > rarefy > manifest
 ruleorder: export_phyloseq  > extract_biom
