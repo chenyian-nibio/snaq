@@ -9,6 +9,7 @@ The simplest command is:
 snakemake --cores 10 --use-conda results/AB/AB+fp-f17-r21+bb-t18+cls-gg+rrf10000.zip
 """
 
+import glob
 from platform import system
 
 _os = system()
@@ -791,6 +792,13 @@ rule summary:
      shell:
           "zip -j {output} {input}"
 
+def get_finished_cohort():
+    files = glob.glob("results/*/*+bb-t18+fp-f17-r21+dd+cls-silva+rrf-d10000.zip")
+    return [x[8:-4] for x in files]
+
+rule summarize_all_for_manta:
+    input:
+        expand('results/{cohort}+manta.zip', cohort=get_finished_cohort())
 
 ruleorder: merge_taxonomy > taxonomy > manifest
 ruleorder: merge_dadatable > rarefy > manifest
