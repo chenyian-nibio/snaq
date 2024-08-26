@@ -689,6 +689,18 @@ rule biom_to_tsv:
      shell:
           "biom convert -i {input} -o {output} --to-tsv"
 
+rule create_biom_report:
+     """generate Excel return report for the collaborators (based on the original biom output)"""
+     input:
+          adiv_tsv="results/{cohort}/{id}+rrf-d{r}+alphadiversity.tsv",
+          biom_tsv="results/{cohort}/{id}+cls-{cls}+rrf-d{r}+otu_tax_biom.tsv"
+     output:
+          xlsx="results/{cohort}/report.{id}+cls-{cls}+rrf-d{r}+biom.xlsx"
+     conda:
+          "envs/excel.yml"
+     shell:
+          "python scripts/create_biom_report.py -a {input.adiv_tsv} -d {input.biom_tsv} -o {output.xlsx}"
+
 rule manta:
      """Produces manta output"""
      input:
@@ -801,7 +813,7 @@ rule summarize_all_for_manta:
         expand('results/{cohort}+manta.zip', cohort=get_finished_cohort())
 
 rule create_report:
-     """Create report for participantants"""
+     """generate Excel return report for the collaborators (with taxonomy updated)"""
      input:
           manta="results/{cohort}/{id}+cls-{cls}+rrf-d{r}+manta.csv",
           adiv="results/{cohort}/{id}+rrf-d{r}+alphadiversity.tsv",
