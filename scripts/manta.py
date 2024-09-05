@@ -48,6 +48,9 @@ def top_taxons(df):
 @click.option("-x", "output_taxonomy", required=True, type=str)
 def manta(input_file, output_file, taxonpath, abundant_taxonomy, sample_file_name, names, database, output_taxonomy):
     df = pd.read_csv(input_file, sep="\t", skiprows=[0])
+    # get rid of Mitochondria and Chloroplast 
+    df = df[~df['#OTU ID'].str.contains('g__Mitochondria') & ~df['#OTU ID'].str.contains('g__Chloroplast')].reset_index()
+
     with open(taxonpath) as f:
         taxonpath=json.load(f)
     with open(names) as f:
