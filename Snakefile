@@ -4,9 +4,9 @@ Snakemake pipeline for analyzing 16S RNA data using QIIME2
 Usage
 -----
 
-The simplest command is:
+An example command is as following:
 
-snakemake --cores 10 --use-conda results/AB/AB+fp-f17-r21+bb-t18+cls-gg+rrf10000.zip
+snakemake --cores 10 --use-conda results/AB/AB+fp-f17-r21+bb-t18+rrf-d10000+cls-gg.zip
 """
 
 import glob
@@ -19,13 +19,12 @@ if _os == "Linux":
 elif _os == "Darwin":
      qiime_env = "envs/qiime2-2023.2-py38-osx-conda.yml"
 
-
 rule export_artifact_2:
      """Export Artifact content to a folder"""
      message:
           "Extracting artifact"
      input:
-          "results/{cohort, [A-Z]}/{cohort}.qza"
+          "results/{cohort}/{cohort}.qza"
      output:
           directory("temp/{cohort}/{cohort}/")
      conda:
@@ -35,14 +34,12 @@ rule export_artifact_2:
           "--input-path {input} "
           "--output-path {output}"
 
-
-
 rule export_artifact:
      """Export Artifact content to a folder"""
      message:
           "Extracting artifact"
      input:
-          "results/{cohort, [A-Z]}/{cohort}+{etc}.qza"
+          "results/{cohort}/{cohort}+{etc}.qza"
      output:
           directory("temp/{cohort}/{cohort}+{etc}")
      conda:
@@ -52,12 +49,10 @@ rule export_artifact:
           "--input-path {input} "
           "--output-path {output}"
 
-
 def get_allfile_names(wildcards):
      """Get all files from a folder"""
      input_folder = os.path.join("temp", wildcards.cohort, wildcards.id)
      return " ".join([os.path.join(input_folder, x) for x in os.listdir(input_folder) if "fastq" in x])
-
 
 rule help:
      """Print out the information of rules on screen (docstrings)."""
@@ -155,7 +150,7 @@ rule manifest:
      message:
           "Creating manifest file"
      input:
-          "data/{cohort, [A-Z]}/"
+          "data/{cohort}/"
      output:
           "results/{cohort}/{cohort}_manifest.tsv"
      conda:
@@ -182,11 +177,10 @@ rule import_data:
           "--input-format PairedEndFastqManifestPhred33V2 "
           "--output-path {output} "
 
-
 rule trim_fastp:
      """Crop primers: Crop primers from both end reads."""
      input:
-          qza="results/{cohort, [A-Z]}/{id}.qza"
+          qza="results/{cohort}/{id}.qza"
      output:
           "results/{cohort}/{id}+fp-f{len1, \d+}-r{len2, \d+}.qza"
      message:
@@ -198,11 +192,10 @@ rule trim_fastp:
           "--len1 {wildcards.len1} --len2 {wildcards.len2} "
           "--outputf {output}"
 
-
 rule trim_bbduk:
      """Quality trimming using bbduk"""
      input:
-          qza="results/{cohort, [A-Z]}/{id}.qza"
+          qza="results/{cohort}/{id}.qza"
      output:
           "results/{cohort}/{id}+bb-t{threshold, \d+}.qza"
      message:
@@ -213,11 +206,10 @@ rule trim_bbduk:
           "python scripts/bbduk.py -i {input} "
           "-q {wildcards.threshold} -o {output}"
 
-
 rule dada2:
      """Dada2 algorithm"""
      input:
-          "results/{cohort, [A-Z]}/{id}.qza"
+          "results/{cohort}/{id}.qza"
      output:
           table="results/{cohort}/{id}+dd_table.qza",
           stats="results/{cohort}/{id}+dd_stats.qza",
@@ -236,13 +228,12 @@ rule dada2:
           "--o-denoising-stats {output.stats} "
           "--verbose --p-n-threads {threads}"
 
-
 rule rarefy:
      """rarefy feature table."""
      input:
           "results/{cohort}/{id}_table.qza"
      output:
-          "results/{cohort}/{id}_table+rrf-d{r, \d+}.qza"
+          "results/{cohort}/{id}+rrf-d{r, \d+}_table.qza"
      conda:
           qiime_env
      shell:
@@ -250,6 +241,15 @@ rule rarefy:
           "--i-table {input} "
           "--p-sampling-depth {wildcards.r} "
           "--o-rarefied-table {output}"
+
+rule dump_seq_file:
+     """dump seq.qza for rarefied table"""
+     input:
+          "results/{cohort}/{id}_seq.qza"
+     output:
+          "results/{cohort}/{id}+rrf-d{r}_seq.qza"
+     shell:
+          "cp {input} {output}"
 
 rule plot_dada_stats:
      """Plot dada2 stats results in form of distribution plot of the percentage of remained reads from the original data"""
@@ -261,7 +261,6 @@ rule plot_dada_stats:
           qiime_env
      shell:
           "python scripts/plot_dada.py --inp {input} --plot {output}"
-
 
 def get_dada_jpgs(wildcards):
      """Get dada2 plot file names from a folder"""
@@ -289,8 +288,6 @@ rule dada_stats_report:
           get_dada_jpgs_comma_separated
      shell:
           "python scripts/report_stats.py --inp {params} --outp {output}"
-
-
 
 rule download_silva_classifier:
      """Download pretrained SILVA taxonomy classifier"""
@@ -322,7 +319,6 @@ rule download_silvav34_classifier:
           "cd classifiers && "
           "wget https://zenodo.org/record/5535616/files/silvaV34-classifier.qza"
 
-
 rule taxonomy:
      """Assign taxonomy to ASVs"""
      input:
@@ -340,7 +336,6 @@ rule taxonomy:
           "--i-classifier {input.classifier} "
           "--i-reads {input.seq} --p-n-jobs {threads} "
           "--o-classification {output.taxonomy}"
-
 
 rule mafft:
      """Creating phylogenetic tree step 1 """
@@ -405,7 +400,6 @@ rule midpoint_root:
           "--i-tree {input} "
           "--o-rooted-tree {output}"
 
-
 rule export_tree:
      """Creating phylogenitic tree step 5: Exporting tree from Artifact file
      """
@@ -425,7 +419,6 @@ rule export_tree:
           "--output-path {params} && "
           "cp {params}/tree.nwk {output} && "
           "rm -r {params}"
-
 
 rule make_biom:
      """Create Biom table"""
@@ -493,14 +486,13 @@ rule export_phyloseq:
           "--biom {input.biom} --tree {input.tree} "
           "--outp {output}"
 
-
 rule weighted_unifrac:
      """Computes beta diversity weighted unifrac"""
      input:
-          table="results/{cohort}/{id}_table+rrf-d{r}.qza",
+          table="results/{cohort}/{id}_table.qza",
           tree="results/{cohort}/{id}+fasttree_rooted.qza"
      output:
-          "results/{cohort}/{id}+rrf-d{r}+beta_weightedunifrac.qza"
+          "results/{cohort}/{id}+beta_weightedunifrac.qza"
      conda:
           qiime_env
      shell:
@@ -511,10 +503,10 @@ rule weighted_unifrac:
 rule unweighted_unifrac:
      """Computes beta diversity weighted unifrac"""
      input:
-          table="results/{cohort}/{id}_table+rrf-d{r}.qza",
+          table="results/{cohort}/{id}_table.qza",
           tree="results/{cohort}/{id}+fasttree_rooted.qza"
      output:
-          "results/{cohort}/{id}+rrf-d{r}+beta_unweightedunifrac.qza"
+          "results/{cohort}/{id}+beta_unweightedunifrac.qza"
      conda:
           qiime_env
      shell:
@@ -537,9 +529,9 @@ rule extract_taxonomy_tsv:
 rule extract_dadatable_tsv:
      """converts dada table.qza to tsv"""
      input:
-          "results/{cohort}/{id}_table+rrf-d{r}.qza"
+          "results/{cohort}/{id}_table.qza"
      output:
-          "results/{cohort}/{id}_table+rrf-d{r}.tsv"
+          "results/{cohort}/{id}_table.tsv"
      conda:
           qiime_env
      shell:
@@ -557,9 +549,6 @@ rule extract_unifrac_tsv:
      shell:
           "python scripts/artifact_view.py --artifact {input} "
           "--filename {output} --filetype distance"
-
-
-
 
 rule merge_dadatable:
      """Merge dada table from 2 datasets"""
@@ -610,18 +599,17 @@ rule merge_taxonomy:
 rule collapse_tax:
      """collapse taxonomy table to species level"""
      input:
-          table="results/{cohort}/{cohort}+{id}+dd_table+rrf-d{r}.qza",
-          tax="results/{cohort}/{cohort}+{id}+dd+{etc}_taxonomy.qza"
+          table="results/{cohort}/{cohort}+{id}_table.qza",
+          tax="results/{cohort}/{cohort}+{id}+{etc}_taxonomy.qza"
      output:
-          "results/{cohort}/{cohort}+{id}+dd+{etc}+rrf-d{r}+otu_tax.qza"
+          "results/{cohort}/{cohort}+{id}+{etc}+otu_tax.qza"
      conda:
           qiime_env
      shell:
           "qiime taxa collapse --i-table {input.table} "
-          "--p-level 7 "
+          "--p-level 6 "
           "--i-taxonomy {input.tax} "
           "--o-collapsed-table {output}"
-
 
 rule create_metadata_file:
      input:
@@ -633,13 +621,12 @@ rule create_metadata_file:
      shell:
           "python scripts/create_metadata_file.py -i {input} -o {output}"
 
-
 rule core_metrics:
      input:
-          table="results/{cohort}/{id}_table+rrf-d{r}.qza",
+          table="results/{cohort}/{id}_table.qza",
           metadata="results/{cohort}/{cohort}_metadata.tsv"
      output:
-          directory("results/{cohort}/{id}+rrf-d{r}+coremetrics/")
+          directory("results/{cohort}/{id}+coremetrics/")
      threads:
           30
      conda:
@@ -655,7 +642,7 @@ rule core_metrics:
 rule alpha_diversity:
      """compoutes alpha diversity"""
      input:
-          "results/{cohort}/{id}_table+rrf-d{r}.qza"
+          "results/{cohort}/{id}+rrf-d{r}_table.qza"
      output:
           "results/{cohort}/{id}+rrf-d{r}+alphadiversity.tsv"
      conda:
@@ -664,15 +651,24 @@ rule alpha_diversity:
           "python scripts/alpha_diversity.py --inp {input} "
           "--outp {output}"
 
+rule bridge_alpha_diversity:
+     """bridge non-rarefied sample to rrf-d10000"""
+     input:
+          "results/{cohort}/{id}+rrf-d10000+alphadiversity.tsv"
+     output:
+          "results/{cohort}/{id}+alphadiversity.tsv"
+     shell:
+          "cp {input} {output}"
+
 rule beta_diversity:
      """computes non-phylogenetic beta diversity"""
      input:
-          "results/{cohort}/{id}+rrf-d{r}+otu_tax.qza"
+          "results/{cohort}/{id}+otu_tax.qza"
      output:
-          "results/{cohort}/{id}+rrf-d{r}+beta_braycurtis.tsv",
-          "results/{cohort}/{id}+rrf-d{r}+beta_jaccard.tsv",
+          "results/{cohort}/{id}+beta_braycurtis.tsv",
+          "results/{cohort}/{id}+beta_jaccard.tsv",
      params:
-          "results/{cohort}/{id}+rrf-d{r}+beta.tsv"
+          "results/{cohort}/{id}+beta.tsv"
      conda:
           qiime_env
      shell:
@@ -689,29 +685,17 @@ rule biom_to_tsv:
      shell:
           "biom convert -i {input} -o {output} --to-tsv"
 
-rule create_biom_report:
-     """generate Excel return report for the collaborators (based on the original biom output)"""
-     input:
-          adiv_tsv="results/{cohort}/{id}+rrf-d{r}+alphadiversity.tsv",
-          biom_tsv="results/{cohort}/{id}+cls-{cls}+rrf-d{r}+otu_tax_biom.tsv"
-     output:
-          xlsx="results/{cohort}/report.{id}+cls-{cls}+rrf-d{r}+biom.xlsx"
-     conda:
-          "envs/excel.yml"
-     shell:
-          "python scripts/create_biom_report.py -a {input.adiv_tsv} -d {input.biom_tsv} -o {output.xlsx}"
-
 rule manta:
      """Produces manta output"""
      input:
-          tsv="results/{cohort}/{id}+cls-{cls}+rrf-d{r}+otu_tax_biom.tsv",
+          tsv="results/{cohort}/{id}+cls-{cls}+otu_tax_biom.tsv",
           taxonpath="db/taxonpath.json",
           names="db/names.json"
      output:
-          full="results/{cohort}/{id}+cls-{cls}+rrf-d{r}+manta.csv",
-          tax="results/{cohort}/{id}+cls-{cls}+rrf-d{r}+manta_tax.csv",
-          abundant="results/{cohort}/{id}+cls-{cls}+rrf-d{r}+manta_abundant_tax.csv",
-          sample="results/{cohort}/{id}+cls-{cls}+rrf-d{r}+manta_sample_ids.csv"
+          full="results/{cohort}/{id}+cls-{cls}+manta.csv",
+          tax="results/{cohort}/{id}+cls-{cls}+manta_tax.csv",
+          abundant="results/{cohort}/{id}+cls-{cls}+manta_abundant_tax.csv",
+          sample="results/{cohort}/{id}+cls-{cls}+manta_sample_ids.csv"
      params:
           db=lambda wildcards: "2" if wildcards.cls=="gg" else "1"
      conda:
@@ -723,13 +707,13 @@ rule manta:
           "-s {output.sample} "
           "-a {output.abundant} "
           "-t {input.taxonpath} -n {input.names} "
-          "-d {params.db} -r {wildcards.r}"
+          "-d {params.db} "
 
 rule manta_alpha_diversity:
      input:
-          "results/{cohort}/{id}+rrf-d{r}+alphadiversity.tsv"
+          "results/{cohort}/{id}+alphadiversity.tsv"
      output:
-          "results/{cohort}/{id}+rrf-d{r}+manta_alphadiversity.csv"
+          "results/{cohort}/{id}+manta_alphadiversity.csv"
      conda:
           "envs/other.yml"
      shell:
@@ -740,17 +724,17 @@ rule manta_alpha_diversity:
 rule summary_manta_1:
      """Produces summarized manta results in zipped file"""
      input:
-          microbiota="results/{cohort}/{id}+cls-{cls}+rrf-d{r}+manta.csv",
-          taxonomy="results/{cohort}/{id}+cls-{cls}+rrf-d{r}+manta_tax.csv",
-          dominant_taxon="results/{cohort}/{id}+cls-{cls}+rrf-d{r}+manta_abundant_tax.csv",
-          sample_diversity="results/{cohort}/{id}+rrf-d{r}+manta_alphadiversity.csv",
-          sample_ids = "results/{cohort}/{id}+cls-{cls}+rrf-d{r}+manta_sample_ids.csv"
+          microbiota="results/{cohort}/{id}+cls-{cls}+manta.csv",
+          taxonomy="results/{cohort}/{id}+cls-{cls}+manta_tax.csv",
+          dominant_taxon="results/{cohort}/{id}+cls-{cls}+manta_abundant_tax.csv",
+          sample_diversity="results/{cohort}/{id}+manta_alphadiversity.csv",
+          sample_ids="results/{cohort}/{id}+cls-{cls}+manta_sample_ids.csv"
      output:
-          otaxonomy=temp("results/{cohort}/{id}+cls-{cls}+rrf-d{r}/taxonomy.csv"),
-          omicrobiota=temp("results/{cohort}/{id}+cls-{cls}+rrf-d{r}/microbiota.csv"),
-          osample_diversity=temp("results/{cohort}/{id}+cls-{cls}+rrf-d{r}/sample_diversity.csv"),
-          odominant_taxon=temp("results/{cohort}/{id}+cls-{cls}+rrf-d{r}/dominant_taxon.csv"),
-          sample_ids = temp("results/{cohort}/{id}+cls-{cls}+rrf-d{r}/sample.csv")
+          otaxonomy=temp("results/{cohort}/{id}+cls-{cls}/taxonomy.csv"),
+          omicrobiota=temp("results/{cohort}/{id}+cls-{cls}/microbiota.csv"),
+          osample_diversity=temp("results/{cohort}/{id}+cls-{cls}/sample_diversity.csv"),
+          odominant_taxon=temp("results/{cohort}/{id}+cls-{cls}/dominant_taxon.csv"),
+          sample_ids=temp("results/{cohort}/{id}+cls-{cls}/sample.csv")
      conda:
           "envs/other.yml"
      shell:
@@ -760,67 +744,77 @@ rule summary_manta_1:
           "cp {input.dominant_taxon} {output.odominant_taxon} &&"
           "cp {input.sample_ids} {output.sample_ids}"
 
-
-
-
 rule summary_manta:
      """Produces summarized manta results in zipped file"""
      input:
-          "results/{cohort}/{id}+cls-{cls}+rrf-d{r}/taxonomy.csv",
-          "results/{cohort}/{id}+cls-{cls}+rrf-d{r}/microbiota.csv",
-          "results/{cohort}/{id}+cls-{cls}+rrf-d{r}/sample_diversity.csv",
-          "results/{cohort}/{id}+cls-{cls}+rrf-d{r}/dominant_taxon.csv",
-          "results/{cohort}/{id}+cls-{cls}+rrf-d{r}/sample.csv"
+          "results/{cohort}/{id}+cls-{cls}/taxonomy.csv",
+          "results/{cohort}/{id}+cls-{cls}/microbiota.csv",
+          "results/{cohort}/{id}+cls-{cls}/sample_diversity.csv",
+          "results/{cohort}/{id}+cls-{cls}/dominant_taxon.csv",
+          "results/{cohort}/{id}+cls-{cls}/sample.csv"
      output:
-          "results/{cohort}/{id}+cls-{cls}+rrf-d{r}+manta.zip"
+          "results/{cohort}/{id}+cls-{cls}+manta.zip"
      conda:
           "envs/other.yml"
      shell:
           "zip -j {output} {input}"
-
-
 
 rule summary:
      """Produces summarized results in zipped file"""
      input:
           "results/{cohort}/{id}+cls-{cls}_taxonomy.tsv",
-          "results/{cohort}/{id}_table+rrf-d{r}.tsv",
-          "results/{cohort}/{id}+rrf-d{r}+beta_weightedunifrac.tsv",
-          "results/{cohort}/{id}+rrf-d{r}+beta_unweightedunifrac.tsv",
-          "results/{cohort}/{id}+cls-{cls}+rrf-d{r}+otu_tax.biom",
-          "results/{cohort}/{id}+cls-{cls}+rrf-d{r}+otu_tax_biom.tsv",
+          "results/{cohort}/{id}_table.tsv",
+          "results/{cohort}/{id}+beta_weightedunifrac.tsv",
+          "results/{cohort}/{id}+beta_unweightedunifrac.tsv",
+          "results/{cohort}/{id}+cls-{cls}+otu_tax.biom",
+          "results/{cohort}/{id}+cls-{cls}+otu_tax_biom.tsv",
           "results/{cohort}/{id}+cls-{cls}+phyloseq.RDS",
-          "results/{cohort}/{id}+rrf-d{r}+alphadiversity.tsv",
-          "results/{cohort}/{id}+cls-{cls}+rrf-d{r}+manta.csv",
-          "results/{cohort}/{id}+cls-{cls}+rrf-d{r}+manta_tax.csv",
+          "results/{cohort}/{id}+alphadiversity.tsv",
+          "results/{cohort}/{id}+cls-{cls}+manta.csv",
+          "results/{cohort}/{id}+cls-{cls}+manta_tax.csv",
           "results/{cohort}/{id}_seq.tsv",
-          "results/{cohort}/{id}+cls-{cls}+rrf-d{r}+beta_braycurtis.tsv",
-          "results/{cohort}/{id}+cls-{cls}+rrf-d{r}+beta_jaccard.tsv",
-          "results/{cohort}/{id}+cls-{cls}+rrf-d{r}+manta_abundant_tax.csv"
+          "results/{cohort}/{id}+cls-{cls}+beta_braycurtis.tsv",
+          "results/{cohort}/{id}+cls-{cls}+beta_jaccard.tsv",
+          "results/{cohort}/{id}+cls-{cls}+manta_abundant_tax.csv"
      output:
-          "results/{cohort}/{id}+cls-{cls}+rrf-d{r}.zip"
+          "results/{cohort}/{id}+cls-{cls}.zip"
      conda:
           "envs/other.yml"
      shell:
           "zip -j {output} {input}"
 
+# Start from here, Specifically for JMD...
+
 def get_finished_cohort():
-    files = glob.glob("results/*/*+bb-t18+fp-f17-r21+dd+cls-silva+rrf-d10000.zip")
+    files = glob.glob("results/*/*+bb-t18+fp-f17-r21+dd+rrf-d10000+cls-silva.zip")
     return [x[8:-4] for x in files]
 
-rule summarize_all_for_manta:
-    input:
+rule summarize_all_for_jmd:
+     """Specifically for JMD"""
+     input:
         expand('results/{cohort}+manta.zip', cohort=get_finished_cohort())
+
+rule create_biom_report:
+     """generate Excel return report for the collaborators (based on the original biom output)"""
+     input:
+          adiv_tsv="results/{cohort}/{id}+alphadiversity.tsv",
+          biom_tsv="results/{cohort}/{id}+otu_tax_biom.tsv"
+     output:
+          xlsx="results/{cohort}/report.{id}+biom.xlsx"
+     conda:
+          "envs/excel.yml"
+     shell:
+          "python scripts/create_biom_report.py -a {input.adiv_tsv} -d {input.biom_tsv} -o {output.xlsx}"
 
 rule create_report:
      """generate Excel return report for the collaborators (with taxonomy updated)"""
      input:
-          manta="results/{cohort}/{id}+cls-{cls}+rrf-d{r}+manta.csv",
-          adiv="results/{cohort}/{id}+rrf-d{r}+alphadiversity.tsv",
+          manta="results/{cohort}/{id}+cls-{cls}+manta.csv",
+          adiv="results/{cohort}/{id}+alphadiversity.tsv",
           taxonpath="db/taxonpath.json",
           names="db/names.json"
      output:
-          "results/{cohort}/report.{id}+cls-{cls}+rrf-d{r}.xlsx"
+          "results/{cohort}/report.{id}+cls-{cls}.xlsx"
      conda:
           "envs/excel.yml"
      shell:
@@ -830,7 +824,10 @@ rule create_report:
           "-p {input.taxonpath} -n {input.names} "
           "-o {output} "
 
+# End at here, Specifically for JMD...
+
 ruleorder: merge_taxonomy > taxonomy > manifest
 ruleorder: merge_dadatable > rarefy > manifest
 ruleorder: export_phyloseq  > extract_biom
 ruleorder: extract_biom > make_biom
+ruleorder: alpha_diversity > bridge_alpha_diversity

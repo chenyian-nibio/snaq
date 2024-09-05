@@ -30,7 +30,6 @@ def top_taxons(df):
     ret = df.sort_values(9, ascending=False)
     ret['cumsum'] = ret[9].cumsum()
     ret = ret[ret['cumsum'] < 90]
-    #print(ret)
     ret.drop(['cumsum', 8,9,10], axis="columns", inplace=True)
     ret = ret.melt(id_vars=[0, 11])
     ret.drop_duplicates(inplace=True)
@@ -40,23 +39,25 @@ def top_taxons(df):
 
 @click.command()
 @click.option("-i", "input_file", required=True, type=str)
-#@click.option("-v", "alphadiversity", required=True, type=str)
 @click.option("-o", "output_file", required=True, type=str)
 @click.option("-t", "taxonpath", required=True, type=str)
 @click.option("-s", "sample_file_name", required=True, type=str)
 @click.option("-a", "abundant_taxonomy", required=True, type=str)
 @click.option("-n", "names", required=True, type=str)
 @click.option("-d", "database", required=True, type=str)
-@click.option("-r", "rarefaction", required=True, type=int)
 @click.option("-x", "output_taxonomy", required=True, type=str)
-#@click.option("-p", "output_alphadiversity", required=True, type=str)
-def manta(input_file, output_file, taxonpath, abundant_taxonomy, sample_file_name, names, database, rarefaction, output_taxonomy):
+def manta(input_file, output_file, taxonpath, abundant_taxonomy, sample_file_name, names, database, output_taxonomy):
     df = pd.read_csv(input_file, sep="\t", skiprows=[0])
     with open(taxonpath) as f:
         taxonpath=json.load(f)
     with open(names) as f:
         names=json.load(f)
     taxonomy = {v:k for k, v in names.items()}
+
+    all_reads = {}
+    for sid in df.columns.drop("#OTU ID"):
+        all_reads[sid] = df[sid].sum()
+
     taxs = [x.split(";") for x in df['#OTU ID']]
     d = pd.DataFrame(get_rank_from_ncbi(taxs, taxonomy, taxonpath))
     d.columns = ['0', '1', '2', '3', '4', '5', '6']
@@ -68,7 +69,7 @@ def manta(input_file, output_file, taxonpath, abundant_taxonomy, sample_file_nam
 
     df3m = df3m.loc[:,['variable', '0', '1', '2', '3', '4', '5', '6', 'value']]
 
-    df3m['pct'] = (df3m['value']/rarefaction)*100
+    df3m['pct'] = (df3m['value']/df3m['variable'].apply(lambda x: all_reads[x]))*100
 
     df3m['db'] = int(database)
     df3m['method_id'] = 1
@@ -92,11 +93,6 @@ def manta(input_file, output_file, taxonpath, abundant_taxonomy, sample_file_nam
     df5.columns = range(12)
     abundant_taxons = pd.DataFrame(df5.groupby(0).apply(lambda x: top_taxons(x))).reset_index(drop=True)
     abundant_taxons.to_csv(abundant_taxonomy, index=False)
-
-    # alpha diversity for manta:
-    #alphadiversity_df = pd.read_csv(alphadiversity,comment="#")
-    #alphadiversity_df.to_csv(output_alphadiversity)
-
 
 
 if __name__ == "__main__":

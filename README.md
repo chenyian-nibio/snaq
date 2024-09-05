@@ -77,7 +77,7 @@ Snaq will follow that manifest file if you provide it. Keep a copy of that manif
 To run a basic task in docker then the the command should be like this
 
 ```
-docker run --rm -it -v [snaq folder in host system]:/snaq -w /snaq snakemake/snakemake snakemake --use-conda --cores 10 results/AB/AB+bb-t16+fp-f17-r21+dd+cls-silva+rrf10000.zip
+docker run --rm -it -v [snaq folder in host system]:/snaq -w /snaq snakemake/snakemake snakemake --use-conda --cores 10 results/AB/AB+bb-t16+fp-f17-r21+dd+cls-silva+rrf-d10000.zip
 ```
 
 ## Example dataset:
@@ -85,19 +85,21 @@ is available for testing: can be downloaded from [here](https://github.com/attay
 
 Possible targets are:
 
+* NOTE: From v1.1 the "rrf" option in the target must come before the "cls" option. This is to make the rule "rarefy" become optional in the pipeline.
+
 ```
 AB_manifest.tsv
 AB.qza
 AB+bb-t16+fp-f17-r21+dd+cls-gg_asv.biom
 AB+bb-t16+fp-f17-r21+dd+cls-gg+phyloseq.RDS
-AB+bb-t16+fp-f17-r21+dd+cls-gg+rrf-d10000+beta_braycurtis.tsv
-AB+bb-t16+fp-f17-r21+dd+cls-gg+rrf-d10000+beta_jaccard.tsv
-AB+bb-t16+fp-f17-r21+dd+cls-gg+rrf-d10000+manta_tax.tsv
-AB+bb-t16+fp-f17-r21+dd+cls-gg+rrf-d10000+manta.tsv
-AB+bb-t16+fp-f17-r21+dd+cls-gg+rrf-d10000+otu_tax.biom
-AB+bb-t16+fp-f17-r21+dd+cls-gg+rrf-d10000+otu_tax_biom.tsv
-AB+bb-t16+fp-f17-r21+dd+cls-gg+rrf-d10000+otu_tax.qza
-AB+bb-t16+fp-f17-r21+dd+cls-gg+rrf-d10000.zip
+AB+bb-t16+fp-f17-r21+dd+rrf-d10000+cls-gg+beta_braycurtis.tsv
+AB+bb-t16+fp-f17-r21+dd+rrf-d10000+cls-gg+beta_jaccard.tsv
+AB+bb-t16+fp-f17-r21+dd+rrf-d10000+cls-gg+manta_tax.tsv
+AB+bb-t16+fp-f17-r21+dd+rrf-d10000+cls-gg+manta.tsv
+AB+bb-t16+fp-f17-r21+dd+rrf-d10000+cls-gg+otu_tax.biom
+AB+bb-t16+fp-f17-r21+dd+rrf-d10000+cls-gg+otu_tax_biom.tsv
+AB+bb-t16+fp-f17-r21+dd+rrf-d10000+cls-gg+otu_tax.qza
+AB+bb-t16+fp-f17-r21+dd+rrf-d10000+cls-gg.zip
 AB+bb-t16+fp-f17-r21+dd+cls-gg_taxonomy.csv
 AB+bb-t16+fp-f17-r21+dd+cls-gg_taxonomy.qza
 AB+bb-t16+fp-f17-r21+dd+fasttree.nwk
@@ -111,10 +113,8 @@ AB+bb-t16+fp-f17-r21+dd_seq.csv
 AB+bb-t16+fp-f17-r21+dd_seq.qza
 AB+bb-t16+fp-f17-r21+dd_stats.qza
 AB+bb-t16+fp-f17-r21+dd_table.qza
-AB+bb-t16+fp-f17-r21+dd_table+rrf-d10000.csv
-AB+bb-t16+fp-f17-r21+dd_table+rrf-d10000.qza
+AB+bb-t16+fp-f17-r21+dd+rrf-d10000_table.csv
+AB+bb-t16+fp-f17-r21+dd+rrf-d10000_table.qza
 AB+bb-t16+fp-f17-r21.qza
 ```
 For more details please check the paper.
-
-## More detailed documentation is in preparaion

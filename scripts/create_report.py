@@ -55,7 +55,7 @@ def summarize(input_file, taxonpath, names, adiv_file, output_file):
 
         all_ranks = ['phylum', 'class', 'order', 'family', 'genus']
         for rank in all_ranks:
-            out = df.pivot_table(index='sample_id', columns=f'{rank}_id', values='read_num', aggfunc='sum', fill_value=0)
+            out = df.pivot_table(index='sample_id', columns=f'{rank}_id', values='read_pct', aggfunc='sum', fill_value=0)
             cdic = {t:get_taxonstring(t, taxonpath, names) for t in out.columns.drop('uc')}
             cdic['uc'] = 'unclassified'
             taxid_list = out.columns.to_list()
