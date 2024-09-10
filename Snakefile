@@ -597,7 +597,7 @@ rule merge_taxonomy:
           "--o-merged-data {output}"
 
 rule collapse_tax:
-     """collapse taxonomy table to species level"""
+     """collapse taxonomy table to genus level"""
      input:
           table="results/{cohort}/{cohort}+{id}_table.qza",
           tax="results/{cohort}/{cohort}+{id}+{etc}_taxonomy.qza"

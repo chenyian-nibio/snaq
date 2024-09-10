@@ -10,7 +10,7 @@ def get_rank_from_ncbi(rank, taxonomy, taxonpath):
     ret = [[taxonomy.get(x[3:]) for x in y] for y in rank]
     ret1 = []
     for x in ret:
-        if x == [None, None, None, None, None, None, None]:
+        if all(r is None for r in x):
             next
         else:
             max_id = x[max([i for i in range(len(x)) if x[i] is not None])]
