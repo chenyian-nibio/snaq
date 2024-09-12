@@ -2,12 +2,13 @@
 
 ## [Unreleased]
 
-## [1.1] - 2024-09-05
+## [1.1.0] - 2024-09-11
 
 ### Changed
 
 - To make the rule rarefy optional in the pipeline, the rrf option in the target must come before the cls option.
 - Instead fetching pre-formatted taxonpath.json and names.json, these files will be created based on the download contents from NCBI taxonomy database.
+- Improve the taxon_id mapping for processing the taxonomy in the result data.
 
 ## [1.0.1] - 2023-02-07
 

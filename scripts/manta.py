@@ -6,8 +6,9 @@ empty_rank = {
     'k': '', 'p':'', 'c':'', 'o':'', 'f':'','g':'','s':''
 }
 
-def get_rank_from_ncbi(rank, taxonomy, taxonpath):
-    ret = [[taxonomy.get(x[3:]) for x in y] for y in rank]
+def get_rank_from_ncbi(rank, bacteria, taxonomy, taxonpath):
+    # to prevent some identical names between bacteria and fungi, we need two different dictionary
+    ret = [[bacteria.get(x[3:]) if y[0] == 'd__Bacteria' else taxonomy.get(x[3:]) for x in y] for y in rank]
     ret1 = []
     for x in ret:
         if all(r is None for r in x):
@@ -16,7 +17,6 @@ def get_rank_from_ncbi(rank, taxonomy, taxonpath):
             max_id = x[max([i for i in range(len(x)) if x[i] is not None])]
             txp = taxonpath.get(max_id, empty_rank)
             item = []
-
 
             for r in ['k', 'p', 'c', 'o', 'f', 'g', 's']:
                 _item = txp[r]
@@ -55,14 +55,23 @@ def manta(input_file, output_file, taxonpath, abundant_taxonomy, sample_file_nam
         taxonpath=json.load(f)
     with open(names) as f:
         names=json.load(f)
-    taxonomy = {v:k for k, v in names.items()}
 
     all_reads = {}
     for sid in df.columns.drop("#OTU ID"):
         all_reads[sid] = df[sid].sum()
 
     taxs = [x.split(";") for x in df['#OTU ID']]
-    d = pd.DataFrame(get_rank_from_ncbi(taxs, taxonomy, taxonpath))
+
+    # we probably don't need those taxon ids that don't belong to any hierachy
+    subset = {k:v for k, v in names.items() if k in taxonpath}
+    # to prevent some identical names between bacteria and fungi, we need two different dictionary
+    bacteria = {v:k for k, v in subset.items() if taxonpath[k]['k'] == '2'}
+    non_bacteria = {v:k for k, v in subset.items() if taxonpath[k]['k'] != '2'}
+
+    # synonyms for silva
+    bacteria['Paludicola'] = '2038676'
+
+    d = pd.DataFrame(get_rank_from_ncbi(taxs, bacteria, non_bacteria, taxonpath))
     d.columns = ['0', '1', '2', '3', '4', '5', '6']
     df.drop("#OTU ID", axis="columns", inplace=True)
     df3 = d.join(df)
