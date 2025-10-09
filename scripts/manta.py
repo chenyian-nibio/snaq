@@ -29,7 +29,8 @@ def map_name_to_taxonbid(taxon_name_arr_list, bacteria, non_bacteria, taxonpath)
 def top_taxons(df):
     ret = df.sort_values(9, ascending=False)
     ret['cumsum'] = ret[9].cumsum()
-    ret = ret[ret['cumsum'] < 90]
+    # Include at least the first row even if it exceeds 90
+    ret = ret[(ret['cumsum'] < 90) | (ret['cumsum'] == ret[9].iloc[0])]
     ret.drop(['cumsum', 8,9,10], axis="columns", inplace=True)
     ret = ret.melt(id_vars=[0, 11])
     ret.drop_duplicates(inplace=True)
