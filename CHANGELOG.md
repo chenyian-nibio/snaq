@@ -2,6 +2,13 @@
 
 ## [Unreleased]
 
+## [1.2.0] - 2025-10-09
+
+### Changed
+
+ - Update QIIME2 version to 2024.10 for both linux and OSX.
+ - URL for SILVA and Greengenes Classifier 
+
 ## [1.1.0] - 2024-09-11
 
 ### Changed

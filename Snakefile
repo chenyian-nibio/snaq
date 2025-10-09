@@ -1,5 +1,5 @@
 """
-Snakemake pipeline for analyzing 16S RNA data using QIIME2
+Snakemake pipeline for analyzing 16S RNA data using QIIME2 (2024.10)
 
 Usage
 -----
@@ -15,9 +15,9 @@ from platform import system
 _os = system()
 
 if _os == "Linux":
-     qiime_env = "envs/qiime2-2023.2-py38-linux-conda.yml"
+     qiime_env = "envs/qiime2-amplicon-2024.10-py310-linux-conda.yml"
 elif _os == "Darwin":
-     qiime_env = "envs/qiime2-2023.2-py38-osx-conda.yml"
+     qiime_env = "envs/qiime2-amplicon-2024.10-py310-osx-conda"
 
 rule export_artifact_2:
      """Export Artifact content to a folder"""
@@ -296,28 +296,16 @@ rule download_silva_classifier:
      conda:
           "envs/other.yml"
      shell:
-          "cd classifiers && "
-          "wget https://zenodo.org/record/5535616/files/silva-classifier.qza"
+          "wget https://data.qiime2.org/classifiers/sklearn-1.4.2/silva/silva-138-99-nb-classifier.qza -O classifiers/silva-classifier.qza"
 
 rule download_gg_classifier:
-     """Download GreenGenes taxonomy classifier"""
+     """Download pretrained Greengenes2 taxonomy classifier"""
      output:
           "classifiers/gg-classifier.qza"
      conda:
           "envs/other.yml"
      shell:
-          "cd classifiers && "
-          "wget https://zenodo.org/record/5535616/files/gg-classifier.qza"
-
-rule download_silvav34_classifier:
-     """Download V3-V4 region pretrained SILVA classifier."""
-     output:
-          "classifiers/silvaV34-classifier.qza"
-     conda:
-          "envs/other.yml"
-     shell:
-          "cd classifiers && "
-          "wget https://zenodo.org/record/5535616/files/silvaV34-classifier.qza"
+          "wget https://data.qiime2.org/classifiers/sklearn-1.4.2/greengenes2/2024.09.backbone.full-length.nb.sklearn-1.4.2.qza -O classifiers/gg-classifier.qza"
 
 rule taxonomy:
      """Assign taxonomy to ASVs"""
