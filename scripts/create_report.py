@@ -46,7 +46,7 @@ def summarize(input_file, taxonpath, names, adiv_file, output_file):
         # pd.read_csv(adiv_file, sep="\t", skiprows=[1], index_col=['Sample ID']).to_excel(writer, sheet_name='alpha_div')
         adv_df = pd.read_csv(adiv_file, sep='\t', comment='#', index_col='Sample ID')
         adv_df.index.name = None
-        adv_df.rename(columns={'shannon_entropy': 'Shannon', 'simpson': 'Simpson', 'chao1': 'Chao1', 'observed_features': 'Observed features'}, inplace=True)
+        adv_df.rename(columns={'shannon': 'Shannon', 'simpson': 'Simpson', 'chao1': 'Chao1', 'observed_features': 'Observed features'}, inplace=True)
         adv_df[['Observed features','Chao1','Shannon','Simpson']].to_excel(writer, sheet_name='alpha_diversity', engine='xlsxwriter')
         ws: xlsxwriter.worksheet.Worksheet = writer.sheets['alpha_diversity']
         ws.set_column(0, len(adv_df.columns), None, font_fmt)

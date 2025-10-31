@@ -31,7 +31,9 @@ def alpha_diversity(inp, metrics, outp):
 
     for metric in _metrics:
         r = alpha(a, metric)
-        ret.append(r.alpha_diversity.view(Metadata).to_dataframe())
+        adiv = r.alpha_diversity.view(Metadata).to_dataframe()
+        adiv.columns=[metric]
+        ret.append(adiv)
 
     x = pd.concat(ret, axis=1)
     Metadata(x).save(outp)
