@@ -2,28 +2,43 @@ import pandas as pd
 import json
 import click
 
-rank_empty_tid = {
-    'k': '', 'p':'', 'c':'', 'o':'', 'f':'','g':'','s':''
-}
-
-def map_name_to_taxonbid(taxon_name_arr_list, bacteria, non_bacteria, taxonpath):
-    # to prevent some identical names between bacteria and fungi, we need two different dictionary
-    taxon_id_arr_list = [[bacteria.get(x[3:]) if y[0] == 'd__Bacteria' else non_bacteria.get(x[3:]) for x in y] for y in taxon_name_arr_list]
+def map_name_to_taxonbid(taxon_list, taxonpath):
     ret = []
-    for tid_list in taxon_id_arr_list:
-        if all(id is None for id in tid_list):
-            continue
-        else:
-            max_rank_tid = tid_list[max([i for i in range(len(tid_list)) if tid_list[i] is not None])]
-            txp = taxonpath.get(max_rank_tid, rank_empty_tid)
-            item = []
+    for tid in taxon_list:
+        txp = taxonpath.get(tid)
+        is_uc = False
+        if txp['rank'] == 'no rank':
+            is_uc = True
+        item = []
+        rank_initial = ['d', 'p', 'c', 'o', 'f', 'g']
+        for idx in range(len(rank_initial)):
+            _item = txp[rank_initial[idx]]
+            if _item == "":
+                if is_uc:
+                    _item = tid
+                    is_uc = False
+                else:
+                    target = ''
+                    j = idx
+                    while target == '':
+                        j = j + 1
+                        if j == len(rank_initial):
+                            target = item[-1]
+                        else:
+                            target = txp[rank_initial[j]]
+                    _item = target.split('_')[0] + "_" + rank_initial[idx]
+            item.append(_item)
+        # put species as '-'
+        item.append('-')
+        ret.append(item)
+    return ret
 
-            for r in ['k', 'p', 'c', 'o', 'f', 'g', 's']:
-                _item = txp[r]
-                if _item == "":
-                    _item = "uc"
-                item.append(_item)
-            ret.append(item)
+rank_names = {'p': 'phylum', 'c': 'class', 'o': 'order', 'f': 'family', 'g': 'genus'}
+def map_id_to_name(taxid: str, names):
+    ret = names.get(taxid, '-')
+    if ret == '-':
+        parts = taxid.split('_')
+        ret = f'{rank_names.get(parts[-1])} of {names.get(parts[0])}'
     return ret
 
 def top_taxons(df):
@@ -49,6 +64,8 @@ def top_taxons(df):
 @click.option("-x", "output_taxonomy", required=True, type=str)
 def manta(input_file, output_file, taxonpath, abundant_taxonomy, sample_file_name, names, database, output_taxonomy):
     df = pd.read_csv(input_file, sep="\t", skiprows=[0])
+    # only need Bacteria adn Archaea
+    df = df[df['#OTU ID'].str.startswith('d__Bacteria') | df['#OTU ID'].str.startswith('d__Archaea')]
     # get rid of Mitochondria and Chloroplast 
     df = df[~df['#OTU ID'].str.contains('g__Mitochondria') & ~df['#OTU ID'].str.contains('g__Chloroplast')].reset_index(drop=True)
 
@@ -61,18 +78,18 @@ def manta(input_file, output_file, taxonpath, abundant_taxonomy, sample_file_nam
     for sid in df.columns.drop("#OTU ID"):
         all_reads[sid] = df[sid].sum()
 
-    taxon_name_arr_list = [x.split(";") for x in df['#OTU ID']]
+    # mapping to preprocessed otu names
+    conv_table_file = 'scripts/conversion_table.txt'
+    taxon_df = pd.read_csv(conv_table_file, comment='#', sep='\t')
+    taxon_df['taxon_id'] = taxon_df['taxonomy_id_new'].apply(lambda x: x.split('_')[0] if str(x).__contains__('_') else x)
+    map_dic = dict(zip(taxon_df.iloc[:, 0], taxon_df.iloc[:, 3]))
+    df['#OTU ID'] = df['#OTU ID'].apply(lambda x: map_dic[x])
 
     # we probably don't need those taxon ids that don't belong to any hierachy
     subset = {k:v for k, v in names.items() if k in taxonpath}
-    # to prevent some identical names between bacteria and fungi, we need two different dictionary
-    bacteria = {v:k for k, v in subset.items() if taxonpath[k]['k'] == '2'}
-    non_bacteria = {v:k for k, v in subset.items() if taxonpath[k]['k'] != '2'}
 
-    # synonyms for the legacy taxon name
-    bacteria['Paludicola'] = '2038676'
-
-    df_taxonid = pd.DataFrame(map_name_to_taxonbid(taxon_name_arr_list, bacteria, non_bacteria, taxonpath))
+    taxon_list = df['#OTU ID'].to_list()
+    df_taxonid = pd.DataFrame(map_name_to_taxonbid(taxon_list, taxonpath))
     df_taxonid.columns = ['0', '1', '2', '3', '4', '5', '6']
     df.drop("#OTU ID", axis="columns", inplace=True)
     df3 = df_taxonid.join(df)
@@ -96,7 +113,10 @@ def manta(input_file, output_file, taxonpath, abundant_taxonomy, sample_file_nam
 
     df4['variable'] = df4['variable'].astype(int) + 1
     df4 = df4[df4['value']!= "uc"]
-    df4['names'] = [names.get(x) for x in df4['value']]
+    df4 = df4[df4['value']!= "-"]
+    
+    df4['names'] = [map_id_to_name(x, subset) for x in df4['value']]
+    
     df4=df4.iloc[:,[1,0,2]].drop_duplicates()
     df4.columns = ['id', "rank_id", "name"]
     df4.to_csv(output_taxonomy, index=False)

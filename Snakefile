@@ -798,9 +798,8 @@ rule create_report:
      """generate Excel return report for the collaborators (with taxonomy updated)"""
      input:
           manta="results/{cohort}/{id}+cls-{cls}+manta.csv",
-          adiv="results/{cohort}/{id}+alphadiversity.tsv",
-          taxonpath="db/taxonpath.json",
-          names="db/names.json"
+          taxonomy="results/{cohort}/{id}+cls-{cls}+manta_tax.csv",
+          adiv="results/{cohort}/{id}+alphadiversity.tsv"
      output:
           "results/{cohort}/report.{id}+cls-{cls}.xlsx"
      conda:
@@ -808,8 +807,8 @@ rule create_report:
      shell:
           "python scripts/create_report.py summarize "
           "-i {input.manta} "
+          "-t {input.taxonomy} "
           "-a {input.adiv} "
-          "-p {input.taxonpath} -n {input.names} "
           "-o {output} "
 
 # End at here, Specifically for JMD...

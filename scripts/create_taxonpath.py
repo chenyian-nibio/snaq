@@ -6,8 +6,8 @@ parser.add_argument("-i", dest="input", help="Input nodes.dmp file name", requir
 parser.add_argument("-o", dest="output", help="Output taxonpath.json file name", required=True)
 args = parser.parse_args()
 
-DISPLAY_RANKS = ['k', 'p', 'c', 'o', 'f', 'g', 's']
-RANK_FULL_NAMES = {"k": "superkingdom", "p": "phylum", "c": "class", "o": "order", "f": "family", "g": "genus", "s": "species"}
+DISPLAY_RANKS = ['d', 'p', 'c', 'o', 'f', 'g', 's']
+RANK_FULL_NAMES = {"d": "domain", "p": "phylum", "c": "class", "o": "order", "f": "family", "g": "genus", "s": "species"}
 
 class TaxonEntry(object):
     def __init__(self, taxonId):
@@ -33,7 +33,7 @@ class TaxonEntry(object):
         ret = []
         if self.parent:
             ret.append(self.parent)
-            ret.extend(self.parent.getAllParents())
+            ret.extend(self.parent.getAllParents()) # type: ignore
         return ret
         
     def getTaxonPath(self):
@@ -71,8 +71,7 @@ with open(args.input) as file:
 data = {}
 for tid in taxonEntryMap:
     rank = taxonEntryMap[tid].getRank()
-    if rank in RANK_FULL_NAMES.values():
-        data[tid] = taxonEntryMap[tid].getTaxonPath()
+    data[tid] = taxonEntryMap[tid].getTaxonPath()
 
 with open(args.output, "w") as j:
     json.dump(data, j, indent=3)
